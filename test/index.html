@@ -1,1 +1,85 @@
-const CONTRACT_ADDRESS = "你的合約地址";
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>My Web3 Contract</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.15.0/ethers.umd.min.js"></script>
+</head>
+<body>
+  <h1>HelloWorld Smart Contract</h1>
+
+  <button onclick="connectWallet()">連接 MetaMask</button>
+
+  <h2>目前訊息：</h2>
+  <p id="message">尚未讀取</p>
+
+  <button onclick="readMessage()">讀取 message</button>
+
+  <h2>更新訊息</h2>
+  <input type="text" id="newMessage" placeholder="輸入新訊息">
+  <button onclick="updateMessage()">更新 message</button>
+
+  <p id="status"></p>
+
+  <script>
+    const CONTRACT_ADDRESS = "";
+
+    const CONTRACT_ABI = [
+      { "inputs": [], "name": "message", "outputs": [{ "internalType": "string", "name": "", "type": "string" }], "stateMutability": "view", "type": "function" },
+      { "inputs": [{ "internalType": "string", "name": "_newMessage", "type": "string" }], "name": "updateMessage", "outputs": [], "stateMutability": "nonpayable", "type": "function" }
+    ];
+
+    let provider;
+    let signer;
+    let contract;
+    let readOnlyContract;
+
+    async function connectWallet() {
+      if (!window.ethereum) {
+        alert("請先安裝 MetaMask");
+        return;
+      }
+
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+
+      provider = new ethers.BrowserProvider(window.ethereum);
+      signer = await provider.getSigner();
+
+      contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+      readOnlyContract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+
+      document.getElementById("status").innerText = "MetaMask 已連接";
+    }
+
+    async function readMessage() {
+      if (!readOnlyContract) {
+        await connectWallet();
+      }
+
+      const message = await readOnlyContract.message();
+      document.getElementById("message").innerText = message;
+    }
+
+    async function updateMessage() {
+      if (!contract) {
+        await connectWallet();
+      }
+
+      const newMessage = document.getElementById("newMessage").value;
+
+      if (!newMessage) {
+        alert("請輸入新訊息");
+        return;
+      }
+
+      document.getElementById("status").innerText = "交易送出中，請到 MetaMask 確認...";
+
+      const tx = await contract.updateMessage(newMessage);
+      await tx.wait();
+
+      document.getElementById("status").innerText = "更新成功";
+      await readMessage();
+    }
+  </script>
+</body>
+</html>
